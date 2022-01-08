@@ -1,9 +1,11 @@
-from time import time, sleep
+import time
 from json import JSONDecodeError
 from typing import Dict, List, Optional
 
 from requests import Response
-from .utils import send_request, get_datetime, Method
+
+from senders.utils import send_request, get_datetime
+from senders.types_ import MethodType
 
 
 class SenderWA:
@@ -13,7 +15,9 @@ class SenderWA:
     @staticmethod
     def get_jo(entity: str, response: Optional[Response] = None,
                message: str = '') -> Optional[Dict]:
-        """Parsing response from api and generate response-dictionary"""
+        """
+        Parsing response from api and generate response-dictionary
+        """
         jo = {'done': False, 'message': message, 'entity': entity,
               'when': get_datetime(), 'response_from_api': None}
         try:
@@ -27,15 +31,19 @@ class SenderWA:
         return jo
 
     def send_message(self, entity: str, message: str) -> Dict:
-        """Sending message to user by entity"""
+        """
+        Sending message to user by entity
+        """
         if '@' not in entity:
             entity += '@c.us'
-        res = send_request(url=f'{self.api_url}sendMessage', method=Method.POST,
+        res = send_request(url=f'{self.api_url}sendMessage', method=MethodType.POST,
                            query={'token': self.api_token, 'body': message, 'chatId': entity})
         return self.get_jo(entity, res)
 
     def send_messages(self, entities: List[str], message: str, **kwargs) -> Dict:
-        """Sending message to users by entities"""
+        """
+        Sending message to users by entities
+        """
         timeout = kwargs.get('timeout', 2)
         result = {'works': [], 'start': get_datetime(), 'errors': 0, 'timeout': timeout}
         for entity in entities:
@@ -43,19 +51,23 @@ class SenderWA:
             if not work['done']:
                 result['errors'] += 1
             result['works'].append(work)
-            sleep(timeout)
+            time.sleep(timeout)
         result['end'] = get_datetime()
         return result
 
     def get_chat(self, entity: str) -> Dict:
-        """Getting available chat information"""
+        """
+        Getting available chat information
+        """
         if '@' not in entity:
             return self.get_jo(entity, message='[ERROR] INCORRECT CHAT ID')
         res = send_request(url=f'{self.api_url}dialog', query={'token': self.api_token, 'chatId': entity})
         return self.get_jo(entity, res)
 
     def get_users_entities_from_chats(self, chats_entities: List[str], unique: bool = True) -> Dict:
-        """Getting list entities of chats participants"""
+        """
+        Getting list entities of chats participants
+        """
         result = {'works': [], 'start': get_datetime(), 'errors': 0, 'users_entities': [], 'unique': unique}
 
         for chat_entity in chats_entities:

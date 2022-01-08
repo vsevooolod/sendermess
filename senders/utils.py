@@ -1,4 +1,3 @@
-from enum import Enum
 from typing import Optional, Dict, Union
 from datetime import datetime
 
@@ -6,15 +5,12 @@ import pytz
 import requests
 from requests import Response
 
-
-class Method(str, Enum):
-    GET = 'GET'
-    POST = 'POST'
+from .types_ import MethodType
 
 
-def send_request(url: str, method: Method = Method.GET,
+def send_request(url: str, method: MethodType = MethodType.GET,
                  query: Optional[Dict] = None, data: Optional[Dict] = None) -> Response:
-    if method == Method.POST:
+    if method == MethodType.POST:
         r = requests.post(url, params=query, data=data)
     else:
         r = requests.get(url, params=query)
