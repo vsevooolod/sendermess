@@ -23,8 +23,8 @@ TG_API_HASH = os.getenv('TG_API_HASH')
 
 def main():
     sender = SenderTG(api_id=TG_API_ID, api_hash=TG_API_HASH)
-    some = sender.get_groups()
-    x = 1
+    groups = sender.get_groups(key_words=['краснодар'])
+    participants = sender.get_groups_participants(groups=groups)
 
 
 if __name__ == '__main__':
