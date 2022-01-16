@@ -3,8 +3,8 @@ from typing import Dict, List, Optional
 
 from telethon.sync import TelegramClient
 
-from backend.senders.types_ import MessangerType, DataType
-from backend.senders.utils import get_datetime
+from .types_ import MessangerType, DataType
+from .utils import get_datetime
 
 
 def sessionmaker(func):
@@ -52,9 +52,9 @@ class SenderTG:
         return participants
 
     @sessionmaker
-    def send_messages(self, session, participants: List[Dict], message: str, timeout_sec: int = 10) -> Dict:
-        work = {'type': DataType.WORK.value, 'start': get_datetime(beauty=False),
-                'errors': 0, 'timeout_sec': timeout_sec, 'subworks': [], 'messanger': MessangerType.TG.value}
+    def send_messages(self, session, participants: List[Dict], message: str, timeout_sec: int = 300) -> Dict:
+        work = {'type': DataType.WORK.value, 'start': get_datetime(beauty=False), 'errors': 0,
+                'timeout_sec': timeout_sec, 'subworks': [], 'messanger': MessangerType.TG.value}
         for subwork in participants:
             try:
                 session.send_message(int(subwork['entity']), message)

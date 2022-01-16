@@ -4,8 +4,8 @@ from typing import Dict, List, Optional
 
 from requests import Response
 
-from backend.senders.utils import send_request, get_datetime
-from backend.senders.types_ import MethodType
+from .types_ import MethodType, MessangerType, DataType
+from .utils import send_request, get_datetime
 
 
 class SenderWA:
@@ -13,73 +13,65 @@ class SenderWA:
         self.api_url, self.api_token = api_url, api_token
 
     @staticmethod
-    def get_jo(entity: str, response: Optional[Response] = None,
-               message: str = '') -> Optional[Dict]:
-        """
-        Parsing response from api and generate response-dictionary
-        """
-        jo = {'done': False, 'message': message, 'entity': entity,
-              'when': get_datetime(), 'response_from_api': None}
+    def _get_jo(response: Optional[Response] = None) -> Optional[Dict]:
+        """ Getting JSON from API response """
         try:
-            response_from_api = response.json()
-            if response.status_code == 200:
-                jo['done'] = True
-                response_from_api.pop('sent', None)
-            jo['response_from_api'] = response_from_api
-        except (JSONDecodeError, AttributeError):
-            jo['message'] = '[ERROR] BAD RESPONSE FROM API'
+            if response.status_code != 200:
+                raise TypeError
+            jo = response.json()
+        except (JSONDecodeError, TypeError):
+            jo = dict()
         return jo
 
-    def send_message(self, entity: str, message: str) -> Dict:
-        """
-        Sending message to user by entity
-        """
-        if '@' not in entity:
-            entity += '@c.us'
-        res = send_request(url=f'{self.api_url}sendMessage', method=MethodType.POST,
-                           query={'token': self.api_token, 'body': message, 'chatId': entity})
-        return self.get_jo(entity, res)
+    def get_groups(self, key_words: Optional[List[str]] = None) -> List[Optional[Dict]]:
+        groups = []
+        jo = self._get_jo(send_request(url=f'{self.api_url}dialogs', query={'token': self.api_token}))
+        for dialog in jo.get('dialogs', []):
+            if (not dialog['metadata']['isGroup'] or
+                    (key_words and not list(filter(lambda w: w.lower() in dialog['name'].lower(), key_words)))):
+                continue
+            groups.append({
+                'type': DataType.GROUP.value,
+                'entity': str(dialog['id']),
+                'title': dialog['name'],
+                'participants_count': len(dialog['metadata']['participants']),
+                'participants_entities': dialog['metadata']['participants'],
+                'messanger': MessangerType.WA.value,
+            })
+        return groups
 
-    def send_messages(self, entities: List[str], message: str, **kwargs) -> Dict:
-        """
-        Sending message to users by entities
-        """
-        timeout = kwargs.get('timeout', 2)
-        result = {'works': [], 'start': get_datetime(), 'errors': 0, 'timeout': timeout}
-        for entity in entities:
-            work = self.send_message(entity, message)
-            if not work['done']:
-                result['errors'] += 1
-            result['works'].append(work)
-            time.sleep(timeout)
-        result['end'] = get_datetime()
-        return result
+    def get_groups_participants(self, groups: List[Dict], unique: bool = True) -> List[Dict]:
+        participants, viewed_entities = [], []
+        for group in groups:
+            for participant_entity in group['participants_entities']:
+                if unique and participant_entity in viewed_entities:
+                    continue
+                viewed_entities.append(participant_entity)
+                participants.append({
+                    'type': DataType.PARTICIPANT.value,
+                    'phone': participant_entity.split('@')[0],
+                    'entity': participant_entity,
+                    'name': '',
+                    'messanger': MessangerType.WA.value,
+                })
+        return participants
 
-    def get_chat(self, entity: str) -> Dict:
-        """
-        Getting available chat information
-        """
-        if '@' not in entity:
-            return self.get_jo(entity, message='[ERROR] INCORRECT CHAT ID')
-        res = send_request(url=f'{self.api_url}dialog', query={'token': self.api_token, 'chatId': entity})
-        return self.get_jo(entity, res)
-
-    def get_users_entities_from_chats(self, chats_entities: List[str], unique: bool = True) -> Dict:
-        """
-        Getting list entities of chats participants
-        """
-        result = {'works': [], 'start': get_datetime(), 'errors': 0, 'users_entities': [], 'unique': unique}
-
-        for chat_entity in chats_entities:
-            work = self.get_chat(chat_entity)
-            if work['done']:
-                for user_entity in work['response_from_api']['metadata']['participants']:
-                    if user_entity not in result['users_entities'] or not unique:
-                        result['users_entities'].append(user_entity)
-            else:
-                result['errors'] += 1
-            result['works'].append(work)
-
-        result['count_accepted_users_entities'] = len(result['users_entities'])
-        result['end'] = get_datetime()
-        return result
+    def send_messages(self, participants: List[Dict], message: str, timeout_sec: int = 300) -> Dict:
+        work = {'type': DataType.WORK.value, 'start': get_datetime(beauty=False), 'errors': 0,
+                'timeout_sec': timeout_sec, 'subworks': [], 'messanger': MessangerType.WA.value}
+        for subwork in participants:
+            try:
+                jo = self._get_jo(send_request(url=f'{self.api_url}sendMessage', method=MethodType.POST,
+                                              query={'token': self.api_token, 'chatId': subwork['entity'],
+                                                     'body': message}))
+                if not jo or not jo['sent']:
+                    raise Exception(jo.get('message') or 'Bad response from whatsapp api...')
+                done, err_message = True, ''
+            except Exception as ex:
+                done, err_message = False, ex
+                work['errors'] += 1
+            subwork.update({'done': done, 'datetime': get_datetime(beauty=False), 'err_message': err_message})
+            work['subworks'].append(subwork)
+            time.sleep(timeout_sec)
+        work['end'] = get_datetime(beauty=False)
+        return work

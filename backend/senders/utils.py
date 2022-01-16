@@ -10,7 +10,7 @@ from .types_ import MethodType
 
 def send_request(url: str, method: MethodType = MethodType.GET,
                  query: Optional[Dict] = None, data: Optional[Dict] = None) -> Response:
-    if method == MethodType.POST:
+    if method.value == MethodType.POST.value:
         r = requests.post(url, params=query, data=data)
     else:
         r = requests.get(url, params=query)
