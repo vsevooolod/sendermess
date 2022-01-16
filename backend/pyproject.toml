@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "messangers_sender"
+name = "sendermess"
 version = "0.1.0"
 description = ""
 authors = ["Suslov Vsevolod <vsevooolod@gmail.com>"]

@@ -4,8 +4,8 @@ from typing import Dict, List, Optional
 
 from requests import Response
 
-from senders.utils import send_request, get_datetime
-from senders.types_ import MethodType
+from backend.senders.utils import send_request, get_datetime
+from backend.senders.types_ import MethodType
 
 
 class SenderWA:

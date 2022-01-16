@@ -2,8 +2,7 @@ import os
 
 from dotenv import load_dotenv
 
-from senders.whatsapp import SenderWA
-from senders.telegram import SenderTG
+from backend.senders.telegram import SenderTG
 
 
 load_dotenv()
@@ -25,7 +24,7 @@ def main():
     sender = SenderTG(api_id=TG_API_ID, api_hash=TG_API_HASH)
     groups = sender.get_groups(key_words=['краснодар'])
     participants = sender.get_groups_participants(groups=groups)
-
+    x = 1
 
 if __name__ == '__main__':
     main()

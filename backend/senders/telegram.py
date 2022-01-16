@@ -3,13 +3,13 @@ from typing import Dict, List, Optional
 
 from telethon.sync import TelegramClient
 
-from senders.types_ import MessangerType, DataType
-from senders.utils import get_datetime
+from backend.senders.types_ import MessangerType, DataType
+from backend.senders.utils import get_datetime
 
 
 def sessionmaker(func):
     def wrapper(*args, **kwargs):
-        with TelegramClient('anon', args[0].api_id, args[0].api_hash) as session:
+        with TelegramClient('./backend/anon', args[0].api_id, args[0].api_hash) as session:
             return func(session=session, *args, **kwargs)
     return wrapper
 
